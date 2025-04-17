@@ -1,1 +1,20 @@
 @import 'tailwindcss';
+
+@layer base {
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+    body {
+      font-family: "JetBrains Mono", monospace;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
+    }
+    a {
+      @apply underline;
+    }
+    a:hover {
+      @apply text-blue-100 bg-indigo-900
+    }
+    a:active {
+      @apply text-blue-100 bg-indigo-900
+    }
+  }
