@@ -1,0 +1,123 @@
+---
+title: "Fatal Car Crashes on 4/20 Analysis"
+author: "Kaushik // boredcodebyk"
+output: 
+  html_document: 
+    theme: journal
+    fig_caption: true
+    css: style.css
+    fig_width: 9
+knit: (
+  function(inputFile, encoding) { 
+  
+    rmarkdown::render( 
+      input       = inputFile, 
+      encoding    = encoding,       
+      output_file = "index.html") })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(extrafont)
+loadfonts(device = "win")
+```
+
+Today I'm exploring the data on Fatal Car Crashes on 4/20 provided by [TidyTuesday](https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-22/readme.md).
+
+## The Data
+
+```{r}
+library(tidyverse)
+library(plotly)
+
+daily_accidents_420 <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-22/daily_accidents_420_time.csv')
+
+DT::datatable(daily_accidents_420 %>% rename_with(~c("Date", "d420", "Fatalities Count")))
+```
+
+First, I'll prepare a new table to do further analysis.
+
+```{r}
+table1 = daily_accidents_420  %>%
+  pivot_wider(
+    names_from = d420,
+    values_from = fatalities_count,
+  ) %>%
+  rename(d420_false = `FALSE`, d420_true = `TRUE`, d420_na = `NA`) %>%
+  mutate(year = year(date), month = month(date, label = TRUE), day = day(date)) %>% 
+  rowwise() %>%
+  mutate(d_total = sum(d420_false, d420_true, ifelse(is.na(d420_na),0,d420_na)))
+DT::datatable(table1 %>% rename_with(~c("Date", "d420_false", "d420_true", "d420_na", "Year", "Month", "Day", "Fatalities Count")), class = 'cell-border stripe')
+```
+
+## Graph
+
+```{r}
+ggplot(daily_accidents_420, aes(x = date, y = fatalities_count, color = d420)) + 
+  geom_point(aes(color = d420, shape = d420)) +
+  labs(
+    title = "Fatalities Count",
+    color = "Accident between 4:20pm and 11:59pm", 
+    shape = "Accident between 4:20pm and 11:59pm",
+    x = "Date", 
+    y = "Fatalities",
+    tag = "Figure 1"
+  ) +
+  theme(legend.box = "horizontal", legend.position = "bottom")
+```
+
+
+```{r}
+ggplot(daily_accidents_420, aes(x = date, y = fatalities_count, color = d420)) + 
+  geom_smooth(aes(color = d420)) + 
+  geom_smooth(method = "lm", aes(x = date, y = fatalities_count, color = "Overall Fatalities")) + 
+  labs(
+    title = "Fatalities Trend",
+    color = "Accident between 4:20pm and 11:59pm", 
+    x = "Date", 
+    y = "Fatalities",
+    tag = "Figure 2"
+  ) +
+  theme(legend.box = "horizontal", legend.position = "bottom")
+```
+
+According to the Figures 1 and 2, accidents that didn't happened between 4:20 and 11:59 PM on any given day declined between 2005 and 2010, but began to rise again in around 2015. Similarly the accidents that happened between 4:20 and 11:59 PM on any given day also declined between 2005 and 2010 while having slow increase till 2005, and had a incline around the year 2015.
+
+While, the overall fatalities shows a slow decline in trend.
+
+```{r}
+p = ggplot(table1, aes(x = year, y = month, fill = d_total)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="white", high="red") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  labs(
+    title = "Heatmap of accidents cooresponding to Year and Month",
+    fill = "Fatalities",
+    x = "Year", y = "Month",
+    tag = "Figure 3"
+  ) + 
+  theme_classic(base_size = 8, base_family = "JetBrains Mono")
+
+plotly::ggplotly(p)
+```
+
+```{r}
+DT::datatable(
+  table1 %>%
+    arrange(desc(d_total)) %>%
+    select(year,month,day,d_total) %>%
+    rename("Fatalities Count" = d_total)  
+)
+```
+
+
+
+## Bibliography
+
+[1]. Harper S, Palayew A "The annual cannabis holiday and fatal traffic crashes." BMJ Injury Prevention. Published Online First: 29 January 2019. doi: 10.1136/injuryprev-2018-043068. Manuscript and original data/code at https://osf.io/qnrg6/
+
+[2]. Staples JA, Redelmeier DA. "The April 20 cannabis celebration and fatal traffic crashes in the United States." JAMA Intern Med. 2018 Feb; 178(4):569–72.
+
+[3]. Harmon J, Hughes E (2024). _tidytuesdayR: Access the Weekly 'TidyTuesday' Project Dataset_.
+  doi:10.32614/CRAN.package.tidytuesdayR <https://doi.org/10.32614/CRAN.package.tidytuesdayR>, R
+  package version 1.1.2, <https://CRAN.R-project.org/package=tidytuesdayR>.
